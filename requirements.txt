@@ -1,0 +1,12 @@
+pyAesCrypt
+mss
+opencv-python
+pyttsx3
+pyaes
+xmltodict
+secure-delete
+pynput
+retrying
+tabulate
+telebot
+clipboard
