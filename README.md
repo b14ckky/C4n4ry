@@ -1,6 +1,4 @@
-<center>
-  [![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&duration=3000&pause=900&random=false&width=435&lines=Welcome+To+The+C4n4ry!!)](https://git.io/typing-svg)
-</center>
+<a href="https://git.io/typing-svg"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&duration=3000&pause=900&random=false&width=435&lines=Welcome+To+The+C4n4ry!!" alt="Typing SVG" /></a>
 
 
 ###### <p align="center">*This is official repository maintained by me*
