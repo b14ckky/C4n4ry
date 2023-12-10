@@ -1,5 +1,6 @@
+<center>
 <a href="https://git.io/typing-svg"><img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&duration=3000&pause=900&random=false&width=435&lines=Welcome+To+The+C4n4ry!!" alt="Typing SVG" /></a>
-
+</center>
 
 ###### <p align="center">*This is official repository maintained by me*
 ###### <p align="center"> *[0xb14cky → Instagram](https://www.instagram.com/0xb14cky/)✌*
