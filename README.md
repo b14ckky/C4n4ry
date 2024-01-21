@@ -38,6 +38,7 @@ pyinstaller --noconfirm --onefile --windowed C4n4ry.py
 ```py
 # Telegram Token
 TOKEN = ""
+# Why are TOKEN and AUTH passwords hardcoded? Because any Avasory can obsucate it using some crypters, converge it to exe, and run into testing machines, so that's why the command line argument feature is not given. 
 ```
 
  ### Development by
