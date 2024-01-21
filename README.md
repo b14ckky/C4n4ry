@@ -21,7 +21,7 @@ cd C4n4ry
 pip install -r requirements.txt
 python C4n4ry.py
 ```
-2. Running .exe file (Run as Admin)
+2. Running .exe file (Run as Admin) (Recommended)
 ```
 git clone https://github.com/b14ckky/C4n4ry
 cd C4n4ry
