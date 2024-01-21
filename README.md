@@ -38,6 +38,7 @@ pyinstaller --noconfirm --onefile --windowed C4n4ry.py
 ```py
 # Telegram Token
 TOKEN = ""
+AUTH_Password = "" 
 ```
  ### Why are TOKEN and AUTH passwords hardcoded?
 
