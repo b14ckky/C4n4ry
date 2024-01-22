@@ -42,8 +42,8 @@ else:
     print("Please Run With Administrator..!!")
     sys.exit(0)
 
-TOKEN = '6497399585:AAGQq1ouV3AQ43bIhqhxyTU08bluVhSEpgI' 
-AUTH_Password = "Zeel2323@" 
+TOKEN = '' 
+AUTH_Password = "" 
 
 bot = telebot.TeleBot(TOKEN)
 cd = os.path.expanduser("~")
