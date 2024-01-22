@@ -42,7 +42,7 @@ AUTH_Password = ""
 ```
  ### Why are TOKEN and AUTH passwords hardcoded?
 
-- Because if any Advisory can obsucate it using some crypters, converge it to exe, and run into testing machines, so that's why the command line argument feature is not given. 
+- Because if any Adversary can obsucate it using some crypters, converge it to exe, and run into testing machines, so that's why the command line argument feature is not given. 
 
  ### Development by
 
